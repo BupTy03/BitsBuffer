@@ -92,7 +92,7 @@ constexpr T erase_bits(T bits, std::size_t index, std::size_t count) noexcept
 template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
 constexpr inline T erase_bits(T bits, std::size_t index, std::size_t count) noexcept
 {
-	const T mask = ~0;
+	constexpr T mask = ~0;
 	return (bits << (index + count)) | (bits & (~(mask >> index)));
 }
 
