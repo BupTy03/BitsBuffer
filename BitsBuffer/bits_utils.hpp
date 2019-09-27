@@ -11,7 +11,7 @@ constexpr inline bool get_bit(T bits, std::size_t index) noexcept
 }
 
 template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
-constexpr inline T clear_bit(T bits, std::size_t index, bool value) noexcept
+constexpr inline T clear_bit(T bits, std::size_t index) noexcept
 {
 	return bits & (~(1 << ((8 * sizeof(T)) - index - 1)));
 }
@@ -27,7 +27,7 @@ constexpr inline T set_bit(T bits, std::size_t index, bool value) noexcept
 /*
 // normal version of insert_bits function
 template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
-constexpr T insert_bits(T bits, std::size_t index, std::size_t count, bool value)
+constexpr T insert_bits(T bits, std::size_t index, std::size_t count, bool value) noexcept
 {
 	constexpr auto bits_count = 8 * sizeof(T);
 	const auto last_inserted_index = index + count;
@@ -69,6 +69,31 @@ constexpr inline T insert_bits(T bits, std::size_t index, std::size_t count, boo
 	constexpr T mask = ~0;
 	return value ? (((bits >> count) | ((mask << (bits_count - last_inserted_index)))) & (bits | ((mask >> index))))
 		: ((bits >> count) & (mask >> last_inserted_index)) | (bits & (mask << (bits_count - index)));
+}
+
+/*
+// normal version of erase_bits function
+template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+constexpr T erase_bits(T bits, std::size_t index, std::size_t count) noexcept
+{
+	T mask = ~0;
+	mask >>= index;
+	mask = ~mask;
+
+	const T saved = bits & mask;
+	bits <<= index + count;
+
+	bits |= saved;
+	return bits;
+}
+*/
+
+// optimized version of erase_bits function
+template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+constexpr inline T erase_bits(T bits, std::size_t index, std::size_t count) noexcept
+{
+	const T mask = ~0;
+	return (bits << (index + count)) | (bits & (~(mask >> index)));
 }
 
 
