@@ -127,6 +127,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bits_array.hpp" />
+    <ClInclude Include="bits_utils.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
