@@ -10,14 +10,15 @@
 #include <iterator>
 #include <cassert>
 
+
 template<typename T>
 using allowed_for_bits_container_type = std::enable_if_t<std::is_integral_v<T>>;
 
 template<typename InputIt>
 using has_iterator_type = std::enable_if_t<
 	std::is_same_v<
-		typename std::iterator_traits<InputIt>::iterator_category,
-		typename std::iterator_traits<InputIt>::iterator_category
+	typename std::iterator_traits<InputIt>::iterator_category,
+	typename std::iterator_traits<InputIt>::iterator_category
 	>
 >;
 
@@ -62,22 +63,22 @@ public:
 		bits_ |= (~(0 << sz)) << (max_size - sz);
 	}
 
-	constexpr reference operator[](std::size_t bitIndex) { return reference{ bits_, bitIndex }; }
-	constexpr bool operator[](std::size_t bitIndex) const { return get_bit(bits_, bitIndex); }
+	constexpr reference operator[](std::size_t index) { return reference{ bits_, index }; }
+	constexpr bool operator[](std::size_t index) const { return get_bit(bits_, index); }
 	constexpr reference at(std::size_t index)
 	{
-		if (index >= std::size(cont)) throw std::out_of_range{ "index is out of range" };
+		if (index >= size_) throw std::out_of_range{ "index is out of range" };
 		return (*this)[index];
 	}
 	constexpr bool at(std::size_t index) const
 	{
-		if (index >= std::size(cont)) throw std::out_of_range{ "index is out of range" };
+		if (index >= size_) throw std::out_of_range{ "index is out of range" };
 		return (*this)[index];
 	}
 	constexpr bool empty() const { return size_ == 0; }
 
 	constexpr reference front() { empty_check(); return *(begin()); }
-	constexpr bool front() const{ empty_check(); return *(cbegin()); }
+	constexpr bool front() const { empty_check(); return *(cbegin()); }
 
 	constexpr reference back() { empty_check(); return *(end() - 1); }
 	constexpr bool back() const { empty_check(); return *(cend() - 1); }
@@ -92,17 +93,20 @@ public:
 		const auto index = it - cbegin();
 		bits_ = insert_bits(bits_, index, count, value);
 		size_ = new_size;
-		return iterator{ *this, index - 1 };
+		return iterator{ *this, index };
 	}
 	constexpr iterator insert(const_iterator it, bool value) { return insert(it, 1, value); }
 	template<typename InputIt, typename = has_iterator_type<InputIt>>
 	constexpr iterator insert(const_iterator it, InputIt first, InputIt last)
 	{
-		check_iterators_range(first, last);
-		for (; first != last; ++first) {
+		assert(first <= last);
+		check_iterator(it);
+
+		auto itIndex = it - cbegin();
+		for (; first != last; ++first, ++it) {
 			insert(it, 1, bool(*first));
 		}
-		return iterator{ *this, it - cbegin() };
+		return iterator{ *this, itIndex };
 	}
 
 	constexpr iterator erase(const_iterator first, const_iterator last)
@@ -118,19 +122,21 @@ public:
 
 		bits_ = erase_bits(bits_, indexFirst, count);
 		size_ -= count;
-		return iterator{ *this, indexLast };
+		return iterator{ *this, indexFirst };
 	}
-	constexpr iterator erase(const_iterator it) 
+	constexpr iterator erase(const_iterator it)
 	{
 		check_iterator(it);
 		const auto index = it - cbegin();
 		bits_ = erase_bits(bits_, index, 1);
-		--size;
-		return iterator{ *this, index + 1 };
+		--size_;
+		return iterator{ *this, index };
 	}
 
 	constexpr void push_back(bool value) { insert(cend(), 1, value); }
-	constexpr void pop_back(){ erase(cend() - 1); }
+	constexpr void pop_back() { erase(cend() - 1); }
+
+	// TODO: resize
 
 	constexpr size_type size() const { return size_; }
 	constexpr void clear() { bits_ = 0; size_ = 0; }
@@ -138,8 +144,8 @@ public:
 	constexpr iterator begin() { return iterator{ *this, 0 }; }
 	constexpr iterator end() { return iterator{ *this, size_ }; }
 
-	constexpr const_iterator cbegin() const { return const_iterator{ const_cast<bits_array&>(*this), 0 }; }
-	constexpr const_iterator cend() const { return const_iterator{ const_cast<bits_array&>(*this), size_ }; }
+	constexpr const_iterator cbegin() const { return const_iterator{ *this, 0 }; }
+	constexpr const_iterator cend() const { return const_iterator{ *this, size_ }; }
 
 	constexpr const_iterator begin() const { return cbegin(); }
 	constexpr const_iterator end() const { return cend(); }
@@ -149,15 +155,15 @@ private: // reference implementation
 		friend class bits_array<T>;
 		friend class iterator_impl;
 	private:
-		explicit constexpr reference_impl(bits_container_type& bits_cont, size_type index_from_end)
-			: bits_cont_{ &bits_cont }, index_from_end_{ index_from_end } {}
+		explicit constexpr reference_impl(bits_container_type& bits_cont, size_type index)
+			: bits_cont_{ &bits_cont }, index_{ index } {}
 	public:
-		constexpr reference_impl& operator=(bool value) 
-		{ 
-			*bits_cont_ = set_bit(*bits_cont_, index_);
-			return *this; 
+		constexpr reference_impl& operator=(bool value)
+		{
+			*bits_cont_ = set_bit(*bits_cont_, index_, value);
+			return *this;
 		}
-		constexpr operator bool() { return get_bit(*bits_cont_, index_); }
+		constexpr operator bool() { assert(bits_cont_ != nullptr); return get_bit(*bits_cont_, index_); }
 		constexpr friend void swap(reference_impl left, reference_impl right)
 		{
 			const bool tmp = bool(left);
@@ -196,7 +202,7 @@ private: // pointers implementation
 		friend class bits_array<T>;
 		friend class const_iterator_impl;
 	private:
-		explicit constexpr const_pointer_impl(bits_container_type& bits_cont, size_type index)
+		explicit constexpr const_pointer_impl(const bits_container_type& bits_cont, size_type index)
 			: bits_cont_{ &bits_cont }, index_{ index } {}
 
 	public:
@@ -209,7 +215,7 @@ private: // pointers implementation
 		constexpr bool operator!=(decltype(nullptr)) const { return bits_cont_ != nullptr; }
 
 	private:
-		bits_container_type* bits_cont_ = nullptr;
+		const bits_container_type* bits_cont_ = nullptr;
 		size_type index_ = 0;
 	};
 
@@ -242,7 +248,7 @@ private: // iterators
 		{
 			assert(context_ != nullptr);
 			assert((index_ >= 0 && index_ < context_->size_));
-			return reference_impl{ context_->bits_, index_ };
+			return reference_impl{ context_->bits_, static_cast<size_type>(index_) };
 		}
 		constexpr pointer_impl operator->() const { return pointer_impl{ context_->bits_, index_ }; }
 		constexpr reference_impl operator[](difference_type n) const { return *(*this + n); }
@@ -265,7 +271,7 @@ private: // iterators
 		friend class bits_array<T>;
 
 	private:
-		explicit constexpr const_iterator_impl(bits_array& context, difference_type index)
+		explicit constexpr const_iterator_impl(const bits_array& context, difference_type index)
 			: context_{ &context }, index_{ index } {}
 
 	public:
@@ -319,7 +325,7 @@ private: // iterators
 		constexpr bool operator>=(const_iterator_impl other) { return !(*this < other); }
 
 	private:
-		bits_array* context_ = nullptr;
+		const bits_array* context_ = nullptr;
 		difference_type index_ = 0;
 	};
 
@@ -327,8 +333,10 @@ private:
 	void check_index(difference_type index) const { if (index < 0 || index >= size_) throw std::out_of_range{ "index is out of range" }; }
 	void empty_check() const { if (empty()) throw std::out_of_range{ "container is empty" }; }
 	void check_iterator(const_iterator it) const { if (it < cbegin() || it > cend()) throw std::out_of_range{ "iterator is out of range" }; }
-	void check_iterators_range(const_iterator first, const_iterator last) 
-	{ if (first > last || first < cbegin() || last > cend()) throw std::out_of_range{ "invalid iterators range" }; }
+	void check_iterators_range(const_iterator first, const_iterator last)
+	{
+		if (first > last || first < cbegin() || last > cend()) throw std::out_of_range{ "invalid iterators range" };
+	}
 
 private:
 	size_type size_{ 0 };
