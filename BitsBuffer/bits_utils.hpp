@@ -79,23 +79,27 @@ template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
 constexpr T erase_bits(T bits, std::size_t index, std::size_t count) noexcept
 {
 	T mask = ~0;
-	mask >>= index;
-	mask = ~mask;
+	mask <<= 8 * sizeof(T) - index;
 
 	const T saved = bits & mask;
 	bits <<= count;
+
+	mask = ~0;
+	mask >>= index;
+	bits &= mask;
 
 	bits |= saved;
 	return bits;
 }
 */
 
+
 // optimized version of erase_bits function
 template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
 constexpr inline T erase_bits(T bits, std::size_t index, std::size_t count) noexcept
 {
 	constexpr T mask = ~0;
-	return (bits << count) | (bits & (~(mask >> index)));
+	return (bits & (mask << ((8*sizeof(T)) - index))) | ((bits << count) & (mask >> index));
 }
 
 

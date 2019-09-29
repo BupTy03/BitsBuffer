@@ -223,6 +223,54 @@ TEST(PushBack, Trivial) {
 	check_push_back(expected, actual, countOnes, 1);
 }
 
+TEST(PopBack, Trivial) {
+	const auto lst = {1, 0, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1};
+
+	std::vector<bool> expected(lst.begin(), lst.end());
+	bits_array<std::uint32_t> actual(lst.begin(), lst.end());
+	check_containers_equality(expected, actual);
+
+	const int count_to_pop = lst.size() / 2;
+	for (int i = 0; i < count_to_pop; ++i) {
+		expected.pop_back();
+		actual.pop_back();
+	}
+
+	check_containers_equality(expected, actual);
+}
+
+template<class BitsCont>
+void check_resize(std::vector<bool>& expected, bits_array<BitsCont>& actual, std::size_t count)
+{
+	expected.resize(count);
+	actual.resize(count);
+	check_containers_equality(expected, actual);
+}
+
+template<class BitsCont>
+void check_resize(std::vector<bool>& expected, bits_array<BitsCont>& actual, std::size_t count, bool value)
+{
+	expected.resize(count, value);
+	actual.resize(count, value);
+	check_containers_equality(expected, actual);
+}
+
+TEST(Resize, Trivial) {
+	const auto lst = { 1, 0, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1 };
+	std::vector<bool> expected(lst.begin(), lst.end());
+	bits_array<std::uint32_t> actual(lst.begin(), lst.end());
+	check_containers_equality(expected, actual);
+
+	check_resize(expected, actual, expected.size());
+	check_resize(expected, actual, expected.size() + 1);
+	check_resize(expected, actual, expected.size() + 4);
+	check_resize(expected, actual, expected.size() - 1);
+	check_resize(expected, actual, expected.size() - 4);
+	check_resize(expected, actual, expected.size() - 5);
+	check_resize(expected, actual, expected.size() + 10, 1);
+	check_resize(expected, actual, expected.size() + 3, 0);
+}
+
 TEST(Iterators, STLalgorithms) {
 	std::vector<bool> expected;
 	bits_array<std::uint32_t> actual;
