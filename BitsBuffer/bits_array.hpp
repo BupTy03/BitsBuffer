@@ -97,7 +97,7 @@ public:
 		assert(first <= last);
 		check_iterator(it);
 
-		auto itIndex = it - cbegin();
+		const auto itIndex = it - cbegin();
 		for (; first != last; ++first, ++it) {
 			insert(it, 1, bool(*first));
 		}
