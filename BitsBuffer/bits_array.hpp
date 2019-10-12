@@ -337,7 +337,7 @@ private: // iterators
 
 private:
 	void check_index(size_type index) const { if (index >= size_) throw std::out_of_range{ "index is out of range" }; }
-	void check_overflow(size_type sz) const { if (sz > max_size) throw std::out_of_range{ "size is greater than maximum allowed" }; }
+	void check_overflow(size_type sz) const { if (sz > max_size) throw std::overflow_error{ "size is greater than maximum allowed" }; }
 	void empty_check() const { if (empty()) throw std::out_of_range{ "container is empty" }; }
 	void check_iterator(const_iterator it) const { if (it < cbegin() || it > cend()) throw std::out_of_range{ "iterator is out of range" }; }
 	void check_iterators_range(const_iterator first, const_iterator last) const
