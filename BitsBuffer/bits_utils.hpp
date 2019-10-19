@@ -4,24 +4,22 @@
 
 #include <type_traits>
 
-template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+template<typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
 constexpr inline bool get_bit(T bits, std::size_t index) noexcept
 {
-	return bits & (1 << ((8 * sizeof(T)) - index - 1));
+	return bits & (1 << ((8*sizeof(T)) - index - 1));
 }
 
-template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+template<typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
 constexpr inline T clear_bit(T bits, std::size_t index) noexcept
 {
-	return bits & (~(1 << ((8 * sizeof(T)) - index - 1)));
+	return bits & (~(1 << ((8*sizeof(T)) - index - 1)));
 }
 
-template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+template<typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
 constexpr inline T set_bit(T bits, std::size_t index, bool value) noexcept
 {
-	constexpr auto bits_count = 8 * sizeof(T);
-	bits &= (~(1 << (bits_count - index - 1))); // clear bit
-	return bits | (value << (bits_count - index - 1)); // set bit
+	return (bits & (~(1 << ((8*sizeof(T)) - index - 1)))) | (value << ((8*sizeof(T)) - index - 1)); // set bit
 }
 
 /*
@@ -61,15 +59,11 @@ constexpr T insert_bits(T bits, std::size_t index, std::size_t count, bool value
 
 
 // optimized version of insert_bits function
-template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+template<typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
 constexpr inline T insert_bits(T bits, std::size_t index, std::size_t count, bool value) noexcept
 {
-	constexpr auto bits_count = 8 * sizeof(T);
-	const auto last_inserted_index = index + count;
-
-	constexpr T mask = ~0;
-	return value ? (((bits >> count) | ((mask << (bits_count - last_inserted_index)))) & (bits | ((mask >> index))))
-		: ((bits >> count) & (mask >> last_inserted_index)) | (bits & (mask << (bits_count - index)));
+	return value ? (((bits >> count) | (((static_cast<T>(~0)) << ((8*sizeof(T)) - (index + count))))) & (bits | (((static_cast<T>(~0)) >> index))))
+		: ((bits >> count) & ((static_cast<T>(~0)) >> (index + count))) | (bits & ((static_cast<T>(~0)) << ((8*sizeof(T)) - index)));
 }
 
 
@@ -95,11 +89,10 @@ constexpr T erase_bits(T bits, std::size_t index, std::size_t count) noexcept
 
 
 // optimized version of erase_bits function
-template<typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+template<typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
 constexpr inline T erase_bits(T bits, std::size_t index, std::size_t count) noexcept
 {
-	constexpr T mask = ~0;
-	return (bits & (mask << ((8*sizeof(T)) - index))) | ((bits << count) & (mask >> index));
+	return (bits & ((static_cast<T>(~0)) << ((8*sizeof(T)) - index))) | ((bits << count) & ((static_cast<T>(~0)) >> index));
 }
 
 
